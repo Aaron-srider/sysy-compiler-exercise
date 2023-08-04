@@ -1,4 +1,3 @@
-short main() {
+int main() {
     return 0;
-    short id;
 }
