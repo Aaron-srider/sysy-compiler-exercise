@@ -3,6 +3,7 @@
 //%type <ast_val> FuncDef FuncType Block Stmt
 // %type <int_val> Number
 #include "iostream"
+
 // AST
 class BaseAST {
 public:
@@ -84,13 +85,123 @@ public:
 
 class ExpAST : public BaseAST {
 public:
-    std::unique_ptr<BaseAST> unary_exp;
+    std::unique_ptr<BaseAST> add_exp;
 
     std::string dump() override {
-        return unary_exp->dump();
+        return add_exp->dump();
     }
 
 };
+
+
+
+
+
+
+//
+// //MulExp      ::= UnaryExp | MulExp ("*" | "/" | "%") UnaryExp;
+// MulExp
+// : UnaryExp {
+// auto mul_exp = new MulExpAST();
+// mul_exp->choice = UNARYEXP;
+// mul_exp->unary_exp = unique_ptr<BaseAST>($1);
+// $$ = mul_exp;
+// }
+// |
+// MulExp '*' UnaryExp {
+// auto mul_exp = new MulExpAST();
+// mul_exp->choice = MUL_OP_UNARYEXP;
+// mul_exp->mul_op = "*";
+// mul_exp->unary_exp = unique_ptr<BaseAST>($3);
+// $$ = mul_exp;
+// }
+// |
+// MulExp '/' UnaryExp {
+// auto mul_exp = new MulExpAST();
+// mul_exp->choice = MUL_OP_UNARYEXP;
+// mul_exp->mul_op = "/";
+// mul_exp->unary_exp = unique_ptr<BaseAST>($3);
+// $$ = mul_exp;
+// }
+// |
+// MulExp '%' UnaryExp {
+// auto mul_exp = new MulExpAST();
+// mul_exp->choice = MUL_OP_UNARYEXP;
+// mul_exp->mul_op = "%";
+// mul_exp->unary_exp = unique_ptr<BaseAST>($3);
+// $$ = mul_exp;
+// }
+
+enum MulExpASTChoice {
+    UNARYEXP,
+    MUL_OP_UNARYEXP
+};
+
+class MulExpAST : public BaseAST {
+public:
+
+    MulExpASTChoice choice;
+
+    std::unique_ptr<BaseAST> unary_exp;
+    std::unique_ptr<BaseAST> mul_exp;
+    std::string mul_op;
+
+    std::string dump() override {
+        if (choice == UNARYEXP) {
+            return unary_exp->dump();
+        } else {
+            return mul_exp->dump() + mul_op + unary_exp->dump();
+        }
+    }
+};
+
+// //AddExp      ::= MulExp | AddExp ("+" | "-") MulExp;
+// AddExp
+// : MulExp {
+// auto add_exp = new AddExpAST();
+// add_exp->choice = MULEXP;
+// add_exp->mul_exp = unique_ptr<BaseAST>($1);
+// $$ = add_exp;
+// }
+// |
+// AddExp '+' MulExp {
+// auto add_exp = new AddExpAST();
+// add_exp->choice = ADD_OP_MULEXP;
+// add_exp->add_op = "+";
+// add_exp->mul_exp = unique_ptr<BaseAST>($3);
+// $$ = add_exp;
+// }
+// |
+// AddExp '-' MulExp {
+// auto add_exp = new AddExpAST();
+// add_exp->choice = ADD_OP_MULEXP;
+// add_exp->add_op = "-";
+// add_exp->mul_exp = unique_ptr<BaseAST>($3);
+// $$ = add_exp;
+// }
+
+enum AddExpASTChoice {
+    MULEXP,
+    ADD_OP_MULEXP
+};
+class AddExpAST : public BaseAST {
+public:
+
+    AddExpASTChoice choice;
+
+    std::unique_ptr<BaseAST> mul_exp;
+    std::unique_ptr<BaseAST> add_exp;
+    std::string add_op;
+
+    std::string dump() override {
+        if (choice == MULEXP)
+            return mul_exp->dump();
+        else
+            return add_exp->dump() + add_op + mul_exp->dump();
+    }
+};
+
+
 
 
 // //UnaryExp    ::= PrimaryExp | UnaryOp UnaryExp;
@@ -112,6 +223,7 @@ enum UnaryExpASTChoice {
     PRIMARY,
     UNARYOP_UNARYEXP
 };
+
 class UnaryExpAST : public BaseAST {
 public:
 
@@ -123,7 +235,7 @@ public:
     std::unique_ptr<BaseAST> unary_op;
 
     std::string dump() override {
-        if(choice == PRIMARY)
+        if (choice == PRIMARY)
             return primary_exp->dump();
         else
             return unary_op->dump() + unary_exp->dump();
@@ -170,6 +282,7 @@ enum PrimaryExpASTChoice {
     EXP,
     NUMBER
 };
+
 class PrimaryExpAST : public BaseAST {
 public:
     PrimaryExpASTChoice choice;
@@ -177,7 +290,7 @@ public:
     int number;
 
     std::string dump() override {
-        if(choice == EXP)
+        if (choice == EXP)
             return "(" + exp->dump() + ")";
         else
             return std::to_string(number);

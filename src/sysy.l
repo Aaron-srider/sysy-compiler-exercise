@@ -40,9 +40,6 @@ Hexadecimal   0[xX][0-9a-fA-F]+
 "int"           { return INT; }
 "return"        { return RETURN; }
 
-"+"  { yylval.str_val = new string(yytext);  return UNARY_OP; }
-"-"  { yylval.str_val = new string(yytext);  return UNARY_OP; }
-"!"  { yylval.str_val = new string(yytext);  return UNARY_OP; }
 
 {Identifier}    { yylval.str_val = new string(yytext); return IDENT; }
 

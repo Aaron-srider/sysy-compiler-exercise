@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 #include "Ast.h"
-
+#define YYERROR_VERBOSE 1
 // 声明 lexer 函数和错误处理函数
 int yylex();
 void yyerror(std::unique_ptr<BaseAST> &ast, const char *s);
@@ -36,12 +36,11 @@ using namespace std;
 // 注意 IDENT 和 INT_CONST 会返回 token 的值, 分别对应 str_val 和 int_val
 %token SHORT INT RETURN
 %token <str_val> IDENT
-%token <str_val> UNARY_OP
 %token <int_val> INT_CONST
 
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt        UnaryOp UnaryExp PrimaryExp Exp
+%type <ast_val> FuncDef FuncType Block Stmt        UnaryOp UnaryExp PrimaryExp Exp     AddExp MulExp
 %type <int_val> Number
 
 
@@ -107,14 +106,79 @@ Stmt
   }
   ;
 
-//Exp         ::= UnaryExp;
+//Exp         ::= AddExp;
 Exp
-  : UnaryExp {
-  auto exp = new ExpAST();
-  exp->unary_exp = unique_ptr<BaseAST>($1);
-    $$ = exp;
-  }
-  ;
+: AddExp {
+	auto exp = new ExpAST();
+	exp->add_exp = unique_ptr<BaseAST>($1);
+	$$ = exp;
+}
+;
+
+//MulExp      ::= UnaryExp | MulExp ("*" | "/" | "%") UnaryExp;
+MulExp
+: UnaryExp {
+	auto mul_exp = new MulExpAST();
+	mul_exp->choice = UNARYEXP;
+	mul_exp->unary_exp = unique_ptr<BaseAST>($1);
+	$$ = mul_exp;
+}
+|
+MulExp '*' UnaryExp {
+	auto mul_exp = new MulExpAST();
+	mul_exp->choice = MUL_OP_UNARYEXP;
+	mul_exp->mul_op = "*";
+	mul_exp->mul_exp = unique_ptr<BaseAST>($1);
+	mul_exp->unary_exp = unique_ptr<BaseAST>($3);
+	$$ = mul_exp;
+}
+|
+MulExp '/' UnaryExp {
+	auto mul_exp = new MulExpAST();
+	mul_exp->choice = MUL_OP_UNARYEXP;
+	mul_exp->mul_op = "/";
+	mul_exp->mul_exp = unique_ptr<BaseAST>($1);
+	mul_exp->unary_exp = unique_ptr<BaseAST>($3);
+	$$ = mul_exp;
+}
+|
+MulExp '%' UnaryExp {
+	auto mul_exp = new MulExpAST();
+	mul_exp->choice = MUL_OP_UNARYEXP;
+	mul_exp->mul_op = "%";
+	mul_exp->mul_exp = unique_ptr<BaseAST>($1);
+	mul_exp->unary_exp = unique_ptr<BaseAST>($3);
+	$$ = mul_exp;
+}
+
+//AddExp      ::= MulExp | AddExp ("+" | "-") MulExp;
+AddExp
+: MulExp {
+	auto add_exp = new AddExpAST();
+	add_exp->choice = MULEXP;
+	add_exp->mul_exp = unique_ptr<BaseAST>($1);
+	$$ = add_exp;
+}
+|
+AddExp '+' MulExp {
+	auto add_exp = new AddExpAST();
+	add_exp->choice = ADD_OP_MULEXP;
+	add_exp->add_op = "+";
+	add_exp->add_exp = unique_ptr<BaseAST>($1);
+	add_exp->mul_exp = unique_ptr<BaseAST>($3);
+	$$ = add_exp;
+}
+|
+AddExp '-' MulExp {
+	auto add_exp = new AddExpAST();
+	add_exp->choice = ADD_OP_MULEXP;
+	add_exp->add_op = "-";
+	add_exp->add_exp = unique_ptr<BaseAST>($1);
+	add_exp->mul_exp = unique_ptr<BaseAST>($3);
+	$$ = add_exp;
+}
+
+
 
 //UnaryExp    ::= PrimaryExp | UnaryOp UnaryExp;
 UnaryExp
@@ -135,13 +199,10 @@ UnaryExp
   ;
 
 //UnaryOp     ::= "+" | "-" | "!";
-UnaryOp
-  : UNARY_OP {
-		auto unary_op = new UnaryOpAST();
-		unary_op->op = string(*$1);
-		$$ = unary_op;
-  }
-  ;
+UnaryOp: '+'
+       | '-'
+       | '!'
+       ;
 
 //PrimaryExp  ::= "(" Exp ")" | Number;
 PrimaryExp
