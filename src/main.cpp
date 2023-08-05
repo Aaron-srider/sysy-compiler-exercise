@@ -37,16 +37,16 @@ void listFilesRecursively(const fs::path &directory) {
 }
 
 int main(int argc, const char *argv[]) {
-    try {
-        fs::path currentPath = fs::current_path();
-        std::cout << "Current folder path: " << currentPath.string() << std::endl;
-
-        std::cout << "Files in the current directory and its subdirectories:\n";
-        listFilesRecursively(currentPath);
-    } catch (const std::exception &ex) {
-        std::cerr << "Error: " << ex.what() << std::endl;
-        return 1;
-    }
+    // try {
+    //     fs::path currentPath = fs::current_path();
+    //     std::cout << "Current folder path: " << currentPath.string() << std::endl;
+    //
+    //     std::cout << "Files in the current directory and its subdirectories:\n";
+    //     listFilesRecursively(currentPath);
+    // } catch (const std::exception &ex) {
+    //     std::cerr << "Error: " << ex.what() << std::endl;
+    //     return 1;
+    // }
 
 
     // 解析命令行参数. 测试脚本/评测平台要求你的编译器能接收如下参数:

@@ -85,10 +85,10 @@ public:
 
 class ExpAST : public BaseAST {
 public:
-    std::unique_ptr<BaseAST> add_exp;
+    std::unique_ptr<BaseAST> lor_exp;
 
     std::string dump() override {
-        return add_exp->dump();
+        return lor_exp->dump();
     }
 
 };
@@ -294,5 +294,89 @@ public:
             return "(" + exp->dump() + ")";
         else
             return std::to_string(number);
+    }
+};
+
+
+
+
+//RelExp      ::= AddExp | RelExp ("<" | ">" | "<=" | ">=") AddExp;
+//EqExp       ::= RelExp | EqExp ("==" | "!=") RelExp;
+//LAndExp     ::= EqExp | LAndExp "&&" EqExp;
+//LOrExp      ::= LAndExp | LOrExp "||" LAndExp;
+
+enum RelExpASTChoice {
+    ADDEXP,
+    REL_OP_ADDEXP
+};
+class RelExpAST: public BaseAST {
+public:
+    RelExpASTChoice choice;
+    std::unique_ptr<BaseAST> add_exp;
+    std::unique_ptr<BaseAST> rel_exp;
+    std::string rel_op;
+
+    std::string dump() override {
+        if (choice == ADDEXP)
+            return add_exp->dump();
+        else
+            return rel_exp->dump() + rel_op + add_exp->dump();
+    }
+};
+
+enum EqExpASTChoice {
+    RELEXP,
+    EQ_OP_RELEXP
+};
+class EqExpAST: public BaseAST {
+public:
+    EqExpASTChoice choice;
+    std::unique_ptr<BaseAST> rel_exp;
+    std::unique_ptr<BaseAST> eq_exp;
+    std::string eq_op;
+
+    std::string dump() override {
+        if (choice == RELEXP)
+            return rel_exp->dump();
+        else
+            return eq_exp->dump() + eq_op + rel_exp->dump();
+    }
+};
+
+enum LAndExpASTChoice {
+    EQEXP,
+    LAND_OP_EQEXP
+};
+class LAndExpAST: public BaseAST {
+public:
+    LAndExpASTChoice choice;
+    std::unique_ptr<BaseAST> eq_exp;
+    std::unique_ptr<BaseAST> land_exp;
+    std::string land_op;
+
+    std::string dump() override {
+        if (choice == EQEXP)
+            return eq_exp->dump();
+        else
+            return land_exp->dump() + land_op + eq_exp->dump();
+    }
+};
+
+enum LOrExpASTChoice {
+    LAND_EXP,
+    LOR_OP_LAND_EXP
+};
+class LOrExpAST: public BaseAST {
+public:
+    LOrExpASTChoice choice;
+    std::unique_ptr<BaseAST> land_exp;
+    std::unique_ptr<BaseAST> lor_exp;
+    std::string lor_op;
+
+    std::string dump() override {
+        if (choice == LAND_EXP)
+            return land_exp->dump();
+        else
+            return lor_exp->dump() + lor_op + land_exp->dump();
     }
 };

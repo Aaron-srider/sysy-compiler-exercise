@@ -40,7 +40,7 @@ using namespace std;
 
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt        UnaryOp UnaryExp PrimaryExp Exp     AddExp MulExp
+%type <ast_val> FuncDef FuncType Block Stmt        UnaryOp UnaryExp PrimaryExp Exp     AddExp MulExp   LOrExp LAndExp EqExp RelExp
 %type <int_val> Number
 
 
@@ -106,11 +106,12 @@ Stmt
   }
   ;
 
-//Exp         ::= AddExp;
+//Exp         ::= LOrExp;
 Exp
-: AddExp {
+: LOrExp {
+	printf("Exp -> LOrExp\n");
 	auto exp = new ExpAST();
-	exp->add_exp = unique_ptr<BaseAST>($1);
+	exp->lor_exp = unique_ptr<BaseAST>($1);
 	$$ = exp;
 }
 ;
@@ -118,6 +119,7 @@ Exp
 //MulExp      ::= UnaryExp | MulExp ("*" | "/" | "%") UnaryExp;
 MulExp
 : UnaryExp {
+	printf(" UnaryExp => MulExp\n");
 	auto mul_exp = new MulExpAST();
 	mul_exp->choice = UNARYEXP;
 	mul_exp->unary_exp = unique_ptr<BaseAST>($1);
@@ -125,6 +127,7 @@ MulExp
 }
 |
 MulExp '*' UnaryExp {
+	printf(" MulExp * UnaryExp => MulExp\n");
 	auto mul_exp = new MulExpAST();
 	mul_exp->choice = MUL_OP_UNARYEXP;
 	mul_exp->mul_op = "*";
@@ -134,6 +137,7 @@ MulExp '*' UnaryExp {
 }
 |
 MulExp '/' UnaryExp {
+	printf(" MulExp / UnaryExp => MulExp\n");
 	auto mul_exp = new MulExpAST();
 	mul_exp->choice = MUL_OP_UNARYEXP;
 	mul_exp->mul_op = "/";
@@ -143,6 +147,7 @@ MulExp '/' UnaryExp {
 }
 |
 MulExp '%' UnaryExp {
+	printf(" MulExp % UnaryExp => MulExp\n");
 	auto mul_exp = new MulExpAST();
 	mul_exp->choice = MUL_OP_UNARYEXP;
 	mul_exp->mul_op = "%";
@@ -154,6 +159,7 @@ MulExp '%' UnaryExp {
 //AddExp      ::= MulExp | AddExp ("+" | "-") MulExp;
 AddExp
 : MulExp {
+	printf("MulExp => AddExp\n");
 	auto add_exp = new AddExpAST();
 	add_exp->choice = MULEXP;
 	add_exp->mul_exp = unique_ptr<BaseAST>($1);
@@ -161,6 +167,7 @@ AddExp
 }
 |
 AddExp '+' MulExp {
+	printf("AddExp + MulExp => AddExp\n");
 	auto add_exp = new AddExpAST();
 	add_exp->choice = ADD_OP_MULEXP;
 	add_exp->add_op = "+";
@@ -170,6 +177,7 @@ AddExp '+' MulExp {
 }
 |
 AddExp '-' MulExp {
+	printf("AddExp - MulExp => AddExp\n");
 	auto add_exp = new AddExpAST();
 	add_exp->choice = ADD_OP_MULEXP;
 	add_exp->add_op = "-";
@@ -183,6 +191,7 @@ AddExp '-' MulExp {
 //UnaryExp    ::= PrimaryExp | UnaryOp UnaryExp;
 UnaryExp
   : PrimaryExp {
+  		printf("PrimaryExp => UnaryExp  \n");
 		auto unary_exp = new UnaryExpAST();
 		unary_exp->choice = PRIMARY;
 		unary_exp->primary_exp = unique_ptr<BaseAST>($1);
@@ -190,6 +199,7 @@ UnaryExp
   }
   |
   UnaryOp UnaryExp {
+  		printf("UnaryOp UnaryExp => UnaryExp  \n");
 	  auto unary_exp = new UnaryExpAST();
 	  unary_exp->choice = UNARYOP_UNARYEXP;
 	  unary_exp->unary_op =  unique_ptr<BaseAST>($1);
@@ -207,6 +217,7 @@ UnaryOp: '+'
 //PrimaryExp  ::= "(" Exp ")" | Number;
 PrimaryExp
   : '(' Exp ')'  {
+  		printf("(Exp) => PrimaryExp\n");
 		auto primary_exp = new PrimaryExpAST();
 		primary_exp->choice = EXP;
 		primary_exp->exp = unique_ptr<BaseAST>($2);
@@ -214,6 +225,7 @@ PrimaryExp
   }
   |
   Number {
+  		printf("Number => PrimaryExp\n");
   		auto primary_exp = new PrimaryExpAST();
   		primary_exp->choice = NUMBER;
   		primary_exp->number = $1;
@@ -223,9 +235,148 @@ PrimaryExp
 
 Number
   : INT_CONST {
+  	printf("%d => Number\n", $1);
 	$$ = $1;
   }
   ;
+
+
+
+//RelExp      ::= AddExp | RelExp ("<" | ">" | "<=" | ">=") AddExp;
+//EqExp       ::= RelExp | EqExp ("==" | "!=") RelExp;
+//LAndExp     ::= EqExp | LAndExp "&&" EqExp;
+//LOrExp      ::= LAndExp | LOrExp "||" LAndExp;
+
+
+RelExp
+: AddExp {
+	printf(" AddExp=>RelExp \n");
+	auto rel_exp = new RelExpAST();
+	rel_exp->choice = ADDEXP;
+	rel_exp->add_exp = unique_ptr<BaseAST>($1);
+	$$ = rel_exp;
+}
+|
+RelExp '<' AddExp {
+	printf(" RelExp < AddExp=>RelExp \n");
+	auto rel_exp = new RelExpAST();
+	rel_exp->choice = REL_OP_ADDEXP;
+	rel_exp->rel_op = "<";
+	rel_exp->rel_exp = unique_ptr<BaseAST>($1);
+	rel_exp->add_exp = unique_ptr<BaseAST>($3);
+	$$ = rel_exp;
+}
+|
+RelExp '>' AddExp {
+	printf(" RelExp > AddExp=>RelExp \n");
+	auto rel_exp = new RelExpAST();
+	rel_exp->choice = REL_OP_ADDEXP;
+	rel_exp->rel_op = ">";
+	rel_exp->rel_exp = unique_ptr<BaseAST>($1);
+	rel_exp->add_exp = unique_ptr<BaseAST>($3);
+	$$ = rel_exp;
+}
+|
+RelExp '<''=' AddExp {
+	printf(" RelExp <= AddExp => RelExp \n");
+	auto rel_exp = new RelExpAST();
+	rel_exp->choice = REL_OP_ADDEXP;
+	rel_exp->rel_op = "<=";
+	rel_exp->rel_exp = unique_ptr<BaseAST>($1);
+	rel_exp->add_exp = unique_ptr<BaseAST>($4);
+	$$ = rel_exp;
+}
+|
+RelExp '>''=' AddExp {
+	printf(" RelExp >= AddExp => RelExp \n");
+	auto rel_exp = new RelExpAST();
+	rel_exp->choice = REL_OP_ADDEXP;
+	rel_exp->rel_op = ">=";
+	rel_exp->rel_exp = unique_ptr<BaseAST>($1);
+	rel_exp->add_exp = unique_ptr<BaseAST>($4);
+	$$ = rel_exp;
+}
+
+
+EqExp
+: RelExp {
+	printf("RelExp => EqExp\n");
+	auto eq_exp = new EqExpAST();
+	eq_exp->choice = RELEXP;
+	eq_exp->rel_exp = unique_ptr<BaseAST>($1);
+	$$ = eq_exp;
+}
+|
+EqExp '=''=' RelExp {
+	printf(" EqExp == RelExp => EqExp \n");
+	auto eq_exp = new EqExpAST();
+	eq_exp->choice = EQ_OP_RELEXP;
+	eq_exp->eq_op = "==";
+	eq_exp->eq_exp = unique_ptr<BaseAST>($1);
+	eq_exp->rel_exp = unique_ptr<BaseAST>($4);
+	$$ = eq_exp;
+}
+|
+EqExp '!''=' RelExp {
+	printf(" EqExp != RelExp => EqExp \n");
+	auto eq_exp = new EqExpAST();
+	eq_exp->choice = EQ_OP_RELEXP;
+	eq_exp->eq_op = "!=";
+	eq_exp->eq_exp = unique_ptr<BaseAST>($1);
+	eq_exp->rel_exp = unique_ptr<BaseAST>($4);
+	$$ = eq_exp;
+}
+
+LAndExp
+: EqExp {
+	printf("EqExp => LAndExp\n");
+	auto land_exp = new LAndExpAST();
+	land_exp->choice = EQEXP;
+	land_exp->eq_exp = unique_ptr<BaseAST>($1);
+	$$ = land_exp;
+}
+|
+LAndExp '&''&' EqExp {
+	printf("LAndExp && EqExp => LAndExp  \n");
+	auto land_exp = new LAndExpAST();
+	land_exp->choice = LAND_OP_EQEXP;
+	land_exp->land_op = "&&";
+	land_exp->land_exp = unique_ptr<BaseAST>($1);
+	land_exp->eq_exp = unique_ptr<BaseAST>($4);
+	$$ = land_exp;
+}
+|
+LAndExp '|''|' EqExp {
+	printf(" LAndExp || EqExp => LAndExp\n");
+	auto land_exp = new LAndExpAST();
+	land_exp->choice = LAND_OP_EQEXP;
+	land_exp->land_op = "||";
+	land_exp->land_exp = unique_ptr<BaseAST>($1);
+	land_exp->eq_exp = unique_ptr<BaseAST>($4);
+	$$ = land_exp;
+}
+
+LOrExp
+: LAndExp {
+	printf(" LAndExp => LOrExp \n");
+	auto lor_exp = new LOrExpAST();
+	lor_exp->choice = LAND_EXP;
+	lor_exp->land_exp = unique_ptr<BaseAST>($1);
+	$$ = lor_exp;
+}
+|
+LOrExp '|''|' LAndExp {
+	printf(" LOrExp || LAndExp => LOrExp\n");
+	auto lor_exp = new LOrExpAST();
+	lor_exp->choice = LOR_OP_LAND_EXP;
+	lor_exp->lor_op = "||";
+	lor_exp->lor_exp = unique_ptr<BaseAST>($1);
+	lor_exp->land_exp = unique_ptr<BaseAST>($4);
+	$$ = lor_exp;
+}
+
+
+
 
 %%
 
