@@ -36,11 +36,12 @@ using namespace std;
 // 注意 IDENT 和 INT_CONST 会返回 token 的值, 分别对应 str_val 和 int_val
 %token SHORT INT RETURN
 %token <str_val> IDENT
+%token <str_val> UNARY_OP
 %token <int_val> INT_CONST
 
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt
+%type <ast_val> FuncDef FuncType Block Stmt        UnaryOp UnaryExp PrimaryExp Exp
 %type <int_val> Number
 
 
@@ -99,16 +100,68 @@ Block
   ;
 
 Stmt
-  : RETURN Number ';' {
-  auto stmt = new StmtAST();
-  stmt->number = $2;
+  : RETURN Exp ';' {
+    auto stmt = new StmtAST();
+    stmt->exp = unique_ptr<BaseAST>($2);
     $$ = stmt;
   }
   ;
 
+//Exp         ::= UnaryExp;
+Exp
+  : UnaryExp {
+  auto exp = new ExpAST();
+  exp->unary_exp = unique_ptr<BaseAST>($1);
+    $$ = exp;
+  }
+  ;
+
+//UnaryExp    ::= PrimaryExp | UnaryOp UnaryExp;
+UnaryExp
+  : PrimaryExp {
+		auto unary_exp = new UnaryExpAST();
+		unary_exp->choice = PRIMARY;
+		unary_exp->primary_exp = unique_ptr<BaseAST>($1);
+		$$ = unary_exp;
+  }
+  |
+  UnaryOp UnaryExp {
+	  auto unary_exp = new UnaryExpAST();
+	  unary_exp->choice = UNARYOP_UNARYEXP;
+	  unary_exp->unary_op =  unique_ptr<BaseAST>($1);
+	  unary_exp->unary_exp =  unique_ptr<BaseAST>($2);
+	  $$ = unary_exp;
+  }
+  ;
+
+//UnaryOp     ::= "+" | "-" | "!";
+UnaryOp
+  : UNARY_OP {
+		auto unary_op = new UnaryOpAST();
+		unary_op->op = string(*$1);
+		$$ = unary_op;
+  }
+  ;
+
+//PrimaryExp  ::= "(" Exp ")" | Number;
+PrimaryExp
+  : '(' Exp ')'  {
+		auto primary_exp = new PrimaryExpAST();
+		primary_exp->choice = EXP;
+		primary_exp->exp = unique_ptr<BaseAST>($2);
+		$$ = primary_exp;
+  }
+  |
+  Number {
+  		auto primary_exp = new PrimaryExpAST();
+  		primary_exp->choice = NUMBER;
+  		primary_exp->number = $1;
+  		$$ = primary_exp;
+  }
+
+
 Number
   : INT_CONST {
-  logoutString(std::string() + "number encountered: " + std::to_string($1));
 	$$ = $1;
   }
   ;
