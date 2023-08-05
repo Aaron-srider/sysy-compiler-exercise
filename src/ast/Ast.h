@@ -1,3 +1,5 @@
+#include <sstream>
+#include <vector>
 #include "string"
 #include "memory"
 //%type <ast_val> FuncDef FuncType Block Stmt
@@ -49,17 +51,75 @@ public:
 
 };
 
-// This is the AST node for a block
 class BlockAST : public BaseAST {
 public:
-    std::unique_ptr<BaseAST> stmt;
+    std::unique_ptr<BaseAST> block_item_list;
 
     std::string dump() override {
-        return "{" + stmt->dump() + "}";
+        return "{" + block_item_list->dump() + "}";
     }
-
-
 };
+
+enum BlockItemListChoice {
+    EMPTY,
+    BLOCK_LIST
+};
+
+class BlockItemListAST : public BaseAST {
+public:
+
+    BlockItemListChoice choice;
+
+    std::vector<std::unique_ptr<BaseAST>> list;
+
+    std::string dump() override {
+        std::cout << "block item list dump option: " << _tolower(choice) << std::endl;
+        if (choice == EMPTY) {
+            return "";
+        } else {
+            std::string block_item_string;
+            std::cout << "block item list size: " << list.size() << std::endl;
+            for (auto &block_item: list) {
+                std::cout << "dump block item: " << std::endl;
+                std::cout << block_item->dump() << std::endl;
+                block_item_string += block_item->dump() + "\n";
+            }
+            return block_item_string;
+        }
+    }
+};
+
+
+enum BlockItemChoice {
+    STATEMENT,
+    DECLARATION
+};
+
+class BlockItemAST : public BaseAST {
+public:
+    BlockItemChoice choice;
+    std::unique_ptr<BaseAST> statement;
+    std::unique_ptr<BaseAST> declaration;
+
+    std::string dump() override {
+        std::cout << "block item dump option: " << choice << std::endl;
+        if (choice == STATEMENT) {
+            return statement->dump();
+        } else {
+            return declaration->dump();
+        }
+    }
+};
+
+class LValAST : public BaseAST {
+public:
+    std::string ident;
+
+    std::string dump() override {
+        return ident;
+    }
+};
+
 
 // This is the AST node for a statement
 class StmtAST : public BaseAST {
@@ -67,6 +127,8 @@ public:
     std::unique_ptr<BaseAST> exp;
 
     std::string dump() override {
+        std::cout << "stmt dump" << std::endl;
+        std::cout << exp->dump() << std::endl;
         return "return " + exp->dump() + ";";
     }
 
@@ -88,6 +150,8 @@ public:
     std::unique_ptr<BaseAST> lor_exp;
 
     std::string dump() override {
+        std::cout << "exp dump" << std::endl;
+        std::cout << lor_exp->dump() << std::endl;
         return lor_exp->dump();
     }
 
@@ -147,9 +211,12 @@ public:
     std::string mul_op;
 
     std::string dump() override {
+        std::cout << "mul exp dump option: " << choice << std::endl;
         if (choice == UNARYEXP) {
+            std::cout << "unary exp dump" << std::endl;
             return unary_exp->dump();
         } else {
+            std::cout << "mul exp dump" << std::endl;
             return mul_exp->dump() + mul_op + unary_exp->dump();
         }
     }
@@ -184,6 +251,7 @@ enum AddExpASTChoice {
     MULEXP,
     ADD_OP_MULEXP
 };
+
 class AddExpAST : public BaseAST {
 public:
 
@@ -194,10 +262,14 @@ public:
     std::string add_op;
 
     std::string dump() override {
-        if (choice == MULEXP)
+        std::cout << "add exp dump" << std::endl;
+        if (choice == MULEXP) {
+            std::cout << "add exp dump mulexp" << std::endl;
             return mul_exp->dump();
-        else
+        } else {
+            std::cout << "add exp dump addop mulexp" << std::endl;
             return add_exp->dump() + add_op + mul_exp->dump();
+        }
     }
 };
 
@@ -235,10 +307,14 @@ public:
     std::unique_ptr<BaseAST> unary_op;
 
     std::string dump() override {
-        if (choice == PRIMARY)
+        std::cout << "unary exp dump choice: " << choice << std::endl;
+        if (choice == PRIMARY) {
+            std::cout << "unary exp dump primary" << std::endl;
             return primary_exp->dump();
-        else
+        } else {
+            std::cout << "unary exp dump unaryop unaryexp" << std::endl;
             return unary_op->dump() + unary_exp->dump();
+        }
     }
 };
 
@@ -280,20 +356,29 @@ public:
 
 enum PrimaryExpASTChoice {
     EXP,
-    NUMBER
+    NUMBER,
+    LEFT_VALUE
 };
 
 class PrimaryExpAST : public BaseAST {
 public:
     PrimaryExpASTChoice choice;
     std::unique_ptr<BaseAST> exp;
+    std::unique_ptr<BaseAST> left_value;
     int number;
 
     std::string dump() override {
-        if (choice == EXP)
+        std::cout << "primary exp dump choice: " << choice << std::endl;
+        if (choice == EXP) {
+            std::cout << "primary exp dump exp" << std::endl;
             return "(" + exp->dump() + ")";
-        else
+        } else if (choice == LEFT_VALUE) {
+            std::cout << "primary exp dump left value" << std::endl;
+            return left_value->dump();
+        } else {
+            std::cout << "primary exp dump number" << std::endl;
             return std::to_string(number);
+        }
     }
 };
 
@@ -309,7 +394,8 @@ enum RelExpASTChoice {
     ADDEXP,
     REL_OP_ADDEXP
 };
-class RelExpAST: public BaseAST {
+
+class RelExpAST : public BaseAST {
 public:
     RelExpASTChoice choice;
     std::unique_ptr<BaseAST> add_exp;
@@ -317,10 +403,15 @@ public:
     std::string rel_op;
 
     std::string dump() override {
-        if (choice == ADDEXP)
+        std::cout << "dump relexp: " << choice << std::endl;
+
+        if (choice == ADDEXP) {
+            std::cout << "dump add_exp" << std::endl;
             return add_exp->dump();
-        else
+        } else {
+            std::cout << "dump rel_exp: " << std::endl;
             return rel_exp->dump() + rel_op + add_exp->dump();
+        }
     }
 };
 
@@ -328,7 +419,8 @@ enum EqExpASTChoice {
     RELEXP,
     EQ_OP_RELEXP
 };
-class EqExpAST: public BaseAST {
+
+class EqExpAST : public BaseAST {
 public:
     EqExpASTChoice choice;
     std::unique_ptr<BaseAST> rel_exp;
@@ -336,10 +428,14 @@ public:
     std::string eq_op;
 
     std::string dump() override {
-        if (choice == RELEXP)
+        std::cout << "dump eqexp: " << choice << std::endl;
+        if (choice == RELEXP) {
+            std::cout << "dump rel_exp" << std::endl;
             return rel_exp->dump();
-        else
+        } else {
+            std::cout << "dump eq_exp: " << std::endl;
             return eq_exp->dump() + eq_op + rel_exp->dump();
+        }
     }
 };
 
@@ -347,7 +443,8 @@ enum LAndExpASTChoice {
     EQEXP,
     LAND_OP_EQEXP
 };
-class LAndExpAST: public BaseAST {
+
+class LAndExpAST : public BaseAST {
 public:
     LAndExpASTChoice choice;
     std::unique_ptr<BaseAST> eq_exp;
@@ -355,10 +452,14 @@ public:
     std::string land_op;
 
     std::string dump() override {
-        if (choice == EQEXP)
+        std::cout << "dump landexp: " << choice << std::endl;
+        if (choice == EQEXP) {
+            std::cout << "dump eq_exp" << std::endl;
             return eq_exp->dump();
-        else
+        } else {
+            std::cout << "dump land_exp: " << std::endl;
             return land_exp->dump() + land_op + eq_exp->dump();
+        }
     }
 };
 
@@ -366,7 +467,8 @@ enum LOrExpASTChoice {
     LAND_EXP,
     LOR_OP_LAND_EXP
 };
-class LOrExpAST: public BaseAST {
+
+class LOrExpAST : public BaseAST {
 public:
     LOrExpASTChoice choice;
     std::unique_ptr<BaseAST> land_exp;
@@ -374,9 +476,114 @@ public:
     std::string lor_op;
 
     std::string dump() override {
-        if (choice == LAND_EXP)
+        std::cout << "dump lorexp: " << choice << std::endl;
+        if (choice == LAND_EXP) {
+            std::cout << "dump land_exp" << std::endl;
             return land_exp->dump();
-        else
+        } else {
+            std::cout << "dump lor_exp: " << lor_exp->dump() << std::endl;
             return lor_exp->dump() + lor_op + land_exp->dump();
+        }
+    }
+};
+
+
+class DeclarationAST : public BaseAST {
+public:
+    std::unique_ptr<BaseAST> const_declaration;
+
+    std::string dump() override {
+        return const_declaration->dump();
+    }
+};
+
+
+class ConstDeclarationAST : public BaseAST {
+public:
+    std::unique_ptr<BaseAST> b_type;
+    /**
+    * If only a single const_definition is present, then const_definition_list is nullptr
+    */
+    std::unique_ptr<BaseAST> const_definition_list;
+
+    std::string dump() override {
+        auto ss = std::stringstream();
+        ss << "const" << " ";
+        ss << b_type->dump() << " ";
+        ss << const_definition_list->dump();
+        return ss.str();
+    }
+};
+
+
+enum ConstDefinitionListASTChoice {
+    CONST_DEFINITION,
+    CONST_DEFINITION_LIST
+};
+
+class ConstDefinitionListAST : public BaseAST {
+public:
+
+    ConstDefinitionListASTChoice choice;
+    std::unique_ptr<BaseAST> const_definition;
+    std::vector<std::unique_ptr<BaseAST>> list;
+
+    std::string dump() override {
+        if (choice == CONST_DEFINITION) {
+            return const_definition->dump();
+        } else {
+            auto ss = std::stringstream();
+            for (auto &item: list) {
+                ss << item->dump() << ", ";
+            }
+            auto final = ss.str();
+            if (!list.empty()) {
+                final.erase(final.length() - 2);
+            }
+            return final;
+        }
+    }
+};
+
+
+class BTypeAST : public BaseAST {
+public:
+    std::string type;
+
+    std::string dump() {
+        return type;
+    }
+};
+
+class ConstDefinitionAST : public BaseAST {
+public:
+    std::string ident;
+    std::unique_ptr<BaseAST> const_initialization_expression;
+
+    std::string dump() override {
+        auto ss = std::stringstream();
+        ss << ident << " ";
+        ss << "=" << " ";
+        ss << const_initialization_expression->dump();
+        return ss.str();
+    }
+};
+
+class ConstInitializationExpressionAST : public BaseAST {
+public:
+    std::unique_ptr<BaseAST> const_expression;
+
+    std::string dump() override {
+        return const_expression->dump();
+    }
+};
+
+
+class ConstExpressionAST : public BaseAST {
+public:
+    std::unique_ptr<BaseAST> expression;
+
+    std::string dump() override {
+        return expression->dump();
     }
 };

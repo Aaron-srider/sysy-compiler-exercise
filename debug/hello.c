@@ -1,3 +1,4 @@
 int main() {
-    return 333 >= 1 + 222;
+    const int x = 1 + 1;
+    return x;
 }

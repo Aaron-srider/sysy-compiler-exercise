@@ -34,13 +34,18 @@ using namespace std;
 
 // lexer 返回的所有 token 种类的声明
 // 注意 IDENT 和 INT_CONST 会返回 token 的值, 分别对应 str_val 和 int_val
-%token SHORT INT RETURN
+%token SHORT INT RETURN CONST_MODIFIER
 %token <str_val> IDENT
 %token <int_val> INT_CONST
 
 
 // 非终结符的类型定义
-%type <ast_val> FuncDef FuncType Block Stmt        UnaryOp UnaryExp PrimaryExp Exp     AddExp MulExp   LOrExp LAndExp EqExp RelExp
+%type <ast_val> FuncDef FuncType Block BlockItems BlockItem Stmt
+UnaryOp UnaryExp PrimaryExp Exp LVal
+AddExp MulExp
+LOrExp LAndExp EqExp RelExp
+Decl ConstDecl BType ConstDefList ConstDef ConstInitVal ConstExp
+
 %type <int_val> Number
 
 
@@ -72,6 +77,7 @@ CompUnit
 // 这种写法会省下很多内存管理的负担
 FuncDef
   : FuncType IDENT '(' ')' Block {
+    printf("FuncType IDENT '(' ')' Block => FuncDef\n");
     auto ast = new FuncDefAST();
     ast->func_type = unique_ptr<BaseAST>($1);
     logoutString(std::string() + "func name: " + *$2);
@@ -91,15 +97,59 @@ FuncType
   ;
 
 Block
-  : '{' Stmt '}' {
+  : '{' BlockItems '}' {
+    printf("{ BlockItems } => Block\n");
     auto block = new BlockAST();
-    block->stmt = unique_ptr<BaseAST>($2);
+    block->block_item_list = unique_ptr<BaseAST>($2);
     $$ = block;
   }
   ;
 
+BlockItems: /* Empty production */
+  {
+	printf("Empty Block => BlockItems\n");
+	auto block_items = new BlockItemListAST();
+	block_items->choice = EMPTY;
+	$$ = block_items;
+  }
+  | BlockItems BlockItem {
+	printf("BlockItems BlockItem => BlockItems\n");
+	auto block_items = new BlockItemListAST();
+	block_items->choice = BLOCK_LIST;
+	printf("far\n");
+	block_items->list.insert(block_items->list.end(),
+					 std::make_move_iterator(((BlockItemListAST *)$1)->list.begin()),
+					 std::make_move_iterator(((BlockItemListAST *)$1)->list.end()));
+	printf("almost there\n");
+	block_items->list.push_back(unique_ptr<BaseAST>($2));
+	printf("you got it\n");
+	$$ = block_items;
+  }
+  ;
+
+BlockItem
+: Decl
+ {
+   	printf("Decl => BlockItem\n");
+   	auto block_item = new BlockItemAST();
+   	block_item->choice = DECLARATION;
+   	block_item->declaration = unique_ptr<BaseAST>($1);
+   	$$ = block_item;
+ }
+ |
+ Stmt
+ {
+ 	printf("Stmt => BlockItem\n");
+   	auto block_item = new BlockItemAST();
+   	block_item->choice = STATEMENT;
+   	block_item->statement = unique_ptr<BaseAST>($1);
+   	$$ = block_item;
+ }
+ ;
+
 Stmt
   : RETURN Exp ';' {
+    printf("return Exp ; => Stmt\n");
     auto stmt = new StmtAST();
     stmt->exp = unique_ptr<BaseAST>($2);
     $$ = stmt;
@@ -109,7 +159,7 @@ Stmt
 //Exp         ::= LOrExp;
 Exp
 : LOrExp {
-	printf("Exp -> LOrExp\n");
+	printf("LOrExp => Exp\n");
 	auto exp = new ExpAST();
 	exp->lor_exp = unique_ptr<BaseAST>($1);
 	$$ = exp;
@@ -147,7 +197,7 @@ MulExp '/' UnaryExp {
 }
 |
 MulExp '%' UnaryExp {
-	printf(" MulExp % UnaryExp => MulExp\n");
+	printf(" MulExp mod UnaryExp => MulExp\n");
 	auto mul_exp = new MulExpAST();
 	mul_exp->choice = MUL_OP_UNARYEXP;
 	mul_exp->mul_op = "%";
@@ -214,6 +264,15 @@ UnaryOp: '+'
        | '!'
        ;
 
+LVal
+: IDENT {
+	printf("LDENT => LVal\n");
+	auto lval = new LValAST();
+	lval->ident = *$1;
+	$$ = lval;
+}
+
+
 //PrimaryExp  ::= "(" Exp ")" | Number;
 PrimaryExp
   : '(' Exp ')'  {
@@ -222,6 +281,14 @@ PrimaryExp
 		primary_exp->choice = EXP;
 		primary_exp->exp = unique_ptr<BaseAST>($2);
 		$$ = primary_exp;
+  }
+  | LVal
+  {
+	  	printf("LVal => PrimaryExp\n");
+  		auto primary_exp = new PrimaryExpAST();
+  		primary_exp->choice = LVAL;
+  		primary_exp->lval = unique_ptr<BaseAST>($1);
+  		$$ = primary_exp;
   }
   |
   Number {
@@ -375,6 +442,79 @@ LOrExp '|''|' LAndExp {
 	$$ = lor_exp;
 }
 
+
+// variable
+Decl:
+ConstDecl {
+	printf("ConstDecl => Decl\n");
+	auto decl = new DeclarationAST();
+	decl->const_declaration = unique_ptr<BaseAST>($1);
+	$$ = decl;
+}
+
+ConstDecl:
+CONST_MODIFIER BType ConstDefList ';' {
+	printf("CONST_MODIFIER BType ConstDefList => ConstDecl\n");
+	auto const_decl = new ConstDeclarationAST();
+	const_decl->b_type = unique_ptr<BaseAST>($2);
+	const_decl->const_definition_list = unique_ptr<BaseAST>($3);
+	$$ = const_decl;
+}
+
+
+BType:
+INT {
+	printf("INT => BType\n");
+	auto b_type = new BTypeAST();
+	b_type->type = "int";
+	$$ = b_type;
+}
+
+ConstDefList:
+ConstDef
+{
+	printf("ConstDef => ConstDefList\n");
+	auto const_def_list = new ConstDefinitionListAST();
+	const_def_list->choice = CONST_DEFINITION;
+	const_def_list->const_definition = unique_ptr<BaseAST>($1);
+	$$ = const_def_list;
+}
+| ConstDefList ',' ConstDef
+{
+	printf("ConstDefList , ConstDef => ConstDefList\n");
+	auto const_def_list = new ConstDefinitionListAST();
+	const_def_list->choice = CONST_DEFINITION_LIST;
+	const_def_list->list.insert(const_def_list->list.end(),
+				 std::make_move_iterator(((ConstDefinitionListAST *)$1)->list.begin()),
+				 std::make_move_iterator(((ConstDefinitionListAST *)$1)->list.end()));
+	const_def_list->list.push_back(unique_ptr<BaseAST>($3));
+	$$ = const_def_list;
+}
+
+ConstDef:
+IDENT '=' ConstInitVal {
+	printf("IDENT = ConstInitVal => ConstDef\n");
+	auto const_def = new ConstDefinitionAST();
+	const_def->ident = *$1;
+	const_def->const_initialization_expression = unique_ptr<BaseAST>($3);
+	$$ = const_def;
+}
+
+ConstInitVal:
+ConstExp {
+	printf("ConstExp => ConstInitVal\n");
+	auto const_init_val = new ConstInitializationExpressionAST();
+	const_init_val->const_expression = unique_ptr<BaseAST>($1);
+	$$ = const_init_val;
+}
+
+ConstExp:
+Exp {
+	printf("Exp => ConstExp\n");
+	auto const_exp = new ConstExpressionAST();
+	const_exp->expression = unique_ptr<BaseAST>($1);
+	$$ = const_exp;
+}
 
 
 
