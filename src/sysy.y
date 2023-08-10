@@ -35,6 +35,8 @@ using namespace std;
 // lexer 返回的所有 token 种类的声明
 // 注意 IDENT 和 INT_CONST 会返回 token 的值, 分别对应 str_val 和 int_val
 %token SHORT INT RETURN CONST_MODIFIER
+KEY_WORD_IF KEY_WORD_ELSE
+
 %token <str_val> IDENT
 %token <int_val> INT_CONST
 
@@ -188,6 +190,27 @@ Stmt:
     $$ = stmt;
   }
   |
+  // if statement
+  KEY_WORD_IF '(' Exp ')' Stmt {
+    printf("if ( Exp ) Stmt => Stmt\n");
+    auto stmt = new StmtAST();
+    stmt->choice = IF_STATEMENT;
+    stmt->exp = unique_ptr<BaseAST>($3);
+    stmt->if_statement = unique_ptr<BaseAST>($5);
+    $$ = stmt;
+  }
+  |
+  // if else statement
+  KEY_WORD_IF '(' Exp ')' Stmt KEY_WORD_ELSE Stmt {
+    printf("if ( Exp ) Stmt else Stmt => Stmt\n");
+    auto stmt = new StmtAST();
+    stmt->choice = IF_ELSE_STATEMENT;
+    stmt->exp = unique_ptr<BaseAST>($3);
+    stmt->if_statement = unique_ptr<BaseAST>($5);
+    stmt->else_statement = unique_ptr<BaseAST>($7);
+    $$ = stmt;
+  }
+  |
   // return statement
   RETURN Exp ';' {
     printf("return Exp ; => Stmt\n");
@@ -291,7 +314,7 @@ UnaryExp
   }
   |
   UnaryOp UnaryExp {
-  		printf("UnaryOp UnaryExp => UnaryExp  \n");
+  	  printf("UnaryOp UnaryExp => UnaryExp  \n");
 	  auto unary_exp = new UnaryExpAST();
 	  unary_exp->choice = UNARYOP_UNARYEXP;
 	  unary_exp->unary_op =  unique_ptr<BaseAST>($1);
@@ -301,9 +324,25 @@ UnaryExp
   ;
 
 //UnaryOp     ::= "+" | "-" | "!";
-UnaryOp: '+'
-       | '-'
-       | '!'
+UnaryOp:
+       '+' {
+		printf("+ => UnaryOp\n");
+		auto unary_op = new UnaryOpAST();
+		unary_op->op = "+";
+		$$ = unary_op;
+       }
+       | '-'{
+       		printf("- => UnaryOp\n");
+       		auto unary_op = new UnaryOpAST();
+       		unary_op->op = "-";
+       		$$ = unary_op;
+       }
+       | '!' {
+       		printf("! => UnaryOp\n");
+       		auto unary_op = new UnaryOpAST();
+       		unary_op->op = "!";
+       		$$ = unary_op;
+       }
        ;
 
 LVal
@@ -313,7 +352,6 @@ LVal
 	lval->ident = *$1;
 	$$ = lval;
 }
-
 
 //PrimaryExp  ::= "(" Exp ")" | Number;
 PrimaryExp

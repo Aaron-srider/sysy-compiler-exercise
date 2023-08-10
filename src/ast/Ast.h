@@ -126,7 +126,9 @@ enum StmtChoice {
     RETURN_STATEMENT,
     EXPRESSION_STATEMENT,
     EMPTY_STATEMENT,
-    BLOCK_STATEMENT
+    BLOCK_STATEMENT,
+    IF_STATEMENT,
+    IF_ELSE_STATEMENT
 };
 
 // This is the AST node for a statement
@@ -138,6 +140,8 @@ public:
     std::unique_ptr<BaseAST> left_value;
     std::unique_ptr<BaseAST> exp;
     std::unique_ptr<BaseAST> block;
+    std::unique_ptr<BaseAST> if_statement;
+    std::unique_ptr<BaseAST> else_statement;
 
     std::string dump() override {
         std::cout << "dump stmt: " << choice << std::endl;
@@ -159,6 +163,12 @@ public:
         else if(choice == BLOCK_STATEMENT){
             std::cout << "dump block statement: " << std::endl;
             return block->dump();
+        } else if(choice == IF_STATEMENT){
+            std::cout << "dump if statement: " << std::endl;
+            return "if(" + exp->dump() + ")" + if_statement->dump();
+        } else if(choice == IF_ELSE_STATEMENT){
+            std::cout << "dump if else statement: " << std::endl;
+            return "if(" + exp->dump() + ")" + if_statement->dump() + "else" + else_statement->dump();
         }
         else {
             std::cout << "dump error" << std::endl;
@@ -342,7 +352,7 @@ public:
     std::unique_ptr<BaseAST> unary_op;
 
     std::string dump() override {
-        std::cout << "unary exp dump choice: " << choice << std::endl;
+        std::cout << "dump unary exp: " << choice << std::endl;
         if (choice == PRIMARY) {
             std::cout << "unary exp dump primary" << std::endl;
             return primary_exp->dump();
@@ -369,6 +379,7 @@ public:
     std::string op;
 
     std::string dump() override {
+        std::cout << "dump unary op" << std::endl;
         return op;
     }
 
