@@ -121,15 +121,33 @@ public:
 };
 
 
+enum StmtChoice {
+    ASSIGNMENT_STATEMENT,
+    RETURN_STATEMENT
+};
+
 // This is the AST node for a statement
 class StmtAST : public BaseAST {
 public:
+
+    StmtChoice choice;
+
+    std::unique_ptr<BaseAST> left_value;
     std::unique_ptr<BaseAST> exp;
 
     std::string dump() override {
-        std::cout << "stmt dump" << std::endl;
-        std::cout << exp->dump() << std::endl;
-        return "return " + exp->dump() + ";";
+        std::cout << "dump stmt: " << choice << std::endl;
+        if (choice == ASSIGNMENT_STATEMENT) {
+            std::cout << "dump assignment expression: " << std::endl;
+            return left_value->dump() + " = " + exp->dump() + ";";
+        } else if (choice == RETURN_STATEMENT) {
+            std::cout << "dump return statement: " << std::endl;
+            return "return " + exp->dump() + ";";
+        } else {
+            std::cout << "dump error" << std::endl;
+            return "error";
+        }
+
     }
 
 };
@@ -488,21 +506,46 @@ public:
 };
 
 
-class DeclarationAST : public BaseAST {
+class BTypeAST : public BaseAST {
 public:
-    std::unique_ptr<BaseAST> const_declaration;
+    std::string type;
 
-    std::string dump() override {
-        return const_declaration->dump();
+    std::string dump() {
+        return type;
     }
 };
 
+
+enum DeclarationASTChoice {
+    CONST_DECLARATION,
+    VAR_DECLARATION
+};
+class DeclarationAST : public BaseAST {
+public:
+    DeclarationASTChoice choice;
+
+    std::unique_ptr<BaseAST> const_declaration;
+    std::unique_ptr<BaseAST> var_declaration;
+
+    std::string dump() override {
+        std::cout << "dump declaration: " << choice << std::endl;
+        if (choice == CONST_DECLARATION) {
+            std::cout << "dump const_declaration" << std::endl;
+            return const_declaration->dump();
+        } else {
+            std::cout << "dump var_declaration" << std::endl;
+            return var_declaration->dump();
+        }
+    }
+};
+
+// region: const declaration
 
 class ConstDeclarationAST : public BaseAST {
 public:
     std::unique_ptr<BaseAST> b_type;
     /**
-    * If only a single const_definition is present, then const_definition_list is nullptr
+    * If only a single const_definition is present, then var_definition_list is nullptr
     */
     std::unique_ptr<BaseAST> const_definition_list;
 
@@ -511,6 +554,7 @@ public:
         ss << "const" << " ";
         ss << b_type->dump() << " ";
         ss << const_definition_list->dump();
+        ss << ";";
         return ss.str();
     }
 };
@@ -546,15 +590,6 @@ public:
 };
 
 
-class BTypeAST : public BaseAST {
-public:
-    std::string type;
-
-    std::string dump() {
-        return type;
-    }
-};
-
 class ConstDefinitionAST : public BaseAST {
 public:
     std::string ident;
@@ -587,3 +622,95 @@ public:
         return expression->dump();
     }
 };
+
+// endregion
+
+
+
+
+
+
+// region: var declaration
+
+class VarDeclarationAST : public BaseAST {
+public:
+    std::unique_ptr<BaseAST> b_type;
+    /**
+    * If only a single const_definition is present, then var_definition_list is nullptr
+    */
+    std::unique_ptr<BaseAST> var_definition_list;
+
+    std::string dump() override {
+        auto ss = std::stringstream();
+        ss << b_type->dump() << " ";
+        ss << var_definition_list->dump();
+        ss << ";";
+        return ss.str();
+    }
+};
+
+
+enum VarDefinitionListASTChoice {
+    VAR_DEFINITION,
+    VAR_DEFINITION_LIST
+};
+
+class VarDefinitionListAST : public BaseAST {
+public:
+
+    VarDefinitionListASTChoice choice;
+    std::unique_ptr<BaseAST> var_definition;
+    std::vector<std::unique_ptr<BaseAST>> list;
+
+    std::string dump() override {
+        if (choice == VAR_DEFINITION) {
+            return var_definition->dump();
+        } else {
+            auto ss = std::stringstream();
+            for (auto &item: list) {
+                ss << item->dump() << ", ";
+            }
+            auto final = ss.str();
+            if (!list.empty()) {
+                final.erase(final.length() - 2);
+            }
+            return final;
+        }
+    }
+};
+
+
+class VarDefinitionAST : public BaseAST {
+public:
+    std::string ident;
+    std::unique_ptr<BaseAST> var_initialization_expression;
+
+    std::string dump() override {
+        auto ss = std::stringstream();
+        ss << ident << " ";
+        ss << "=" << " ";
+        ss << var_initialization_expression->dump();
+        return ss.str();
+    }
+};
+
+class VarInitializationExpressionAST : public BaseAST {
+public:
+    std::unique_ptr<BaseAST> var_expression;
+
+    std::string dump() override {
+        return var_expression->dump();
+    }
+};
+
+
+class VarExpressionAST : public BaseAST {
+public:
+    std::unique_ptr<BaseAST> expression;
+
+    std::string dump() override {
+        return expression->dump();
+    }
+};
+
+// endregion

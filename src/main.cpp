@@ -66,8 +66,10 @@ int main(int argc, const char *argv[]) {
     auto ret = yyparse(ast);
     assert(!ret);
 
+    cout << "syntax analyze result:" << endl;
     // 输出解析得到的 AST
     cout << ast->dump() << endl;
+
 
 
     return 0;

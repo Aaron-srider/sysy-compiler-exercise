@@ -44,7 +44,11 @@ using namespace std;
 UnaryOp UnaryExp PrimaryExp Exp LVal
 AddExp MulExp
 LOrExp LAndExp EqExp RelExp
-Decl ConstDecl BType ConstDefList ConstDef ConstInitVal ConstExp
+BType Decl
+ConstDecl ConstDefList ConstDef ConstInitVal ConstExp
+VarDecl   VarDefList      VarDef   VarInitVal   VarExp
+
+
 
 %type <int_val> Number
 
@@ -147,10 +151,20 @@ BlockItem
  }
  ;
 
-Stmt
-  : RETURN Exp ';' {
+Stmt:
+  LVal '=' Exp ';' {
+    printf("LVal = Exp ; => Stmt\n");
+    auto stmt = new StmtAST();
+    stmt->choice = ASSIGNMENT_STATEMENT;
+    stmt->left_value = unique_ptr<BaseAST>($1);
+    stmt->exp = unique_ptr<BaseAST>($3);
+    $$ = stmt;
+  }
+  |
+  RETURN Exp ';' {
     printf("return Exp ; => Stmt\n");
     auto stmt = new StmtAST();
+    stmt->choice = RETURN_STATEMENT;
     stmt->exp = unique_ptr<BaseAST>($2);
     $$ = stmt;
   }
@@ -286,8 +300,8 @@ PrimaryExp
   {
 	  	printf("LVal => PrimaryExp\n");
   		auto primary_exp = new PrimaryExpAST();
-  		primary_exp->choice = LVAL;
-  		primary_exp->lval = unique_ptr<BaseAST>($1);
+  		primary_exp->choice = LEFT_VALUE;
+  		primary_exp->left_value = unique_ptr<BaseAST>($1);
   		$$ = primary_exp;
   }
   |
@@ -443,23 +457,7 @@ LOrExp '|''|' LAndExp {
 }
 
 
-// variable
-Decl:
-ConstDecl {
-	printf("ConstDecl => Decl\n");
-	auto decl = new DeclarationAST();
-	decl->const_declaration = unique_ptr<BaseAST>($1);
-	$$ = decl;
-}
 
-ConstDecl:
-CONST_MODIFIER BType ConstDefList ';' {
-	printf("CONST_MODIFIER BType ConstDefList => ConstDecl\n");
-	auto const_decl = new ConstDeclarationAST();
-	const_decl->b_type = unique_ptr<BaseAST>($2);
-	const_decl->const_definition_list = unique_ptr<BaseAST>($3);
-	$$ = const_decl;
-}
 
 
 BType:
@@ -468,6 +466,34 @@ INT {
 	auto b_type = new BTypeAST();
 	b_type->type = "int";
 	$$ = b_type;
+}
+
+
+Decl:
+ConstDecl {
+	printf("ConstDecl => Decl\n");
+	auto decl = new DeclarationAST();
+	decl->const_declaration = unique_ptr<BaseAST>($1);
+	decl->choice = CONST_DECLARATION;
+	$$ = decl;
+}
+| VarDecl {
+	printf("VarDecl => Decl\n");
+	auto decl = new DeclarationAST();
+	decl->var_declaration = unique_ptr<BaseAST>($1);
+	decl->choice = VAR_DECLARATION;
+	$$ = decl;
+}
+
+// region: const declaration
+
+ConstDecl:
+CONST_MODIFIER BType ConstDefList ';' {
+	printf("CONST_MODIFIER BType ConstDefList => ConstDecl\n");
+	auto const_decl = new ConstDeclarationAST();
+	const_decl->b_type = unique_ptr<BaseAST>($2);
+	const_decl->const_definition_list = unique_ptr<BaseAST>($3);
+	$$ = const_decl;
 }
 
 ConstDefList:
@@ -516,7 +542,71 @@ Exp {
 	$$ = const_exp;
 }
 
+// endregion
 
+
+// region: var declaration
+
+VarDecl:
+BType VarDefList ';' {
+	printf("BType VarDefList ;=> VarDecl\n");
+	auto var_decl = new VarDeclarationAST();
+	var_decl->b_type = unique_ptr<BaseAST>($1);
+	var_decl->var_definition_list = unique_ptr<BaseAST>($2);
+	$$ = var_decl;
+}
+
+VarDefList:
+VarDef
+{
+	printf("VarDef => VarDefList\n");
+	auto var_def_list = new VarDefinitionListAST();
+	var_def_list->choice = VAR_DEFINITION;
+	var_def_list->var_definition = unique_ptr<BaseAST>($1);
+	$$ = var_def_list;
+}
+| VarDefList ',' VarDef
+{
+	printf("VarDefList , VarDef => VarDefList\n");
+	auto
+	var_def_list = new VarDefinitionListAST();
+	var_def_list->choice = VAR_DEFINITION_LIST;
+	var_def_list->list.insert(var_def_list->list.end(),
+				 std::make_move_iterator(((VarDefinitionListAST *)$1)->list.begin()),
+				 std::make_move_iterator(((VarDefinitionListAST *)$1)->list.end()));
+	var_def_list->list.push_back(unique_ptr<BaseAST>($3));
+	$$ = var_def_list;
+}
+
+VarDef:
+IDENT '=' VarInitVal {
+	printf("IDENT = VarInitVal => VarDef\n");
+	auto
+	var_def = new VarDefinitionAST();
+	var_def->ident = *$1;
+	var_def->var_initialization_expression = unique_ptr<BaseAST>($3);
+	$$ = var_def;
+}
+
+VarInitVal:
+VarExp {
+	printf("VarExp => VarInitVal\n");
+	auto
+	var_init_val = new VarInitializationExpressionAST();
+	var_init_val->var_expression = unique_ptr<BaseAST>($1);
+	$$ = var_init_val;
+}
+
+VarExp:
+Exp {
+	printf("Exp => VarExp\n");
+	auto
+	var_exp = new VarExpressionAST();
+	var_exp->expression = unique_ptr<BaseAST>($1);
+	$$ = var_exp;
+}
+
+// endregion
 
 %%
 
