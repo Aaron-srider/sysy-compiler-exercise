@@ -123,7 +123,10 @@ public:
 
 enum StmtChoice {
     ASSIGNMENT_STATEMENT,
-    RETURN_STATEMENT
+    RETURN_STATEMENT,
+    EXPRESSION_STATEMENT,
+    EMPTY_STATEMENT,
+    BLOCK_STATEMENT
 };
 
 // This is the AST node for a statement
@@ -134,6 +137,7 @@ public:
 
     std::unique_ptr<BaseAST> left_value;
     std::unique_ptr<BaseAST> exp;
+    std::unique_ptr<BaseAST> block;
 
     std::string dump() override {
         std::cout << "dump stmt: " << choice << std::endl;
@@ -143,7 +147,20 @@ public:
         } else if (choice == RETURN_STATEMENT) {
             std::cout << "dump return statement: " << std::endl;
             return "return " + exp->dump() + ";";
-        } else {
+        }
+        else if(choice == EXPRESSION_STATEMENT){
+            std::cout << "dump expression statement: " << std::endl;
+            return exp->dump() + ";";
+        }
+        else if(choice == EMPTY_STATEMENT){
+            std::cout << "dump empty statement: " << std::endl;
+            return ";";
+        }
+        else if(choice == BLOCK_STATEMENT){
+            std::cout << "dump block statement: " << std::endl;
+            return block->dump();
+        }
+        else {
             std::cout << "dump error" << std::endl;
             return "error";
         }

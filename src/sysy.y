@@ -152,6 +152,7 @@ BlockItem
  ;
 
 Stmt:
+  // assignment statement
   LVal '=' Exp ';' {
     printf("LVal = Exp ; => Stmt\n");
     auto stmt = new StmtAST();
@@ -161,6 +162,33 @@ Stmt:
     $$ = stmt;
   }
   |
+  // expression statement
+  | Exp ';' {
+    printf("Exp ; => Stmt\n");
+    auto stmt = new StmtAST();
+    stmt->choice = EXPRESSION_STATEMENT;
+    stmt->exp = unique_ptr<BaseAST>($1);
+    $$ = stmt;
+  }
+  |
+  // empty statement
+  ';' {
+    printf("; => Stmt\n");
+    auto stmt = new StmtAST();
+    stmt->choice = EMPTY_STATEMENT;
+    $$ = stmt;
+  }
+  |
+  // block statement
+  Block {
+    printf("Block => Stmt\n");
+    auto stmt = new StmtAST();
+    stmt->choice = BLOCK_STATEMENT;
+    stmt->block = unique_ptr<BaseAST>($1);
+    $$ = stmt;
+  }
+  |
+  // return statement
   RETURN Exp ';' {
     printf("return Exp ; => Stmt\n");
     auto stmt = new StmtAST();
