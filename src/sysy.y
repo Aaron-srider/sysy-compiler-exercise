@@ -1,3 +1,5 @@
+//%define api.location.type {struct loc}
+
 %{
 #include <iostream>
 #include <memory>
@@ -11,6 +13,20 @@ void logoutString(std::string str);
 using namespace std;
 
 %}
+
+%code requires {
+  struct loc {
+    int first_line;
+    int first_column;
+    int last_line;
+    int last_column;
+  };
+  #define YYLTYPE struct loc
+}
+
+
+%locations
+
 // 定义 parser 函数和错误处理函数的附加参数
 // 我们需要返回一个字符串作为 AST, 所以我们把附加参数定义成字符串的智能指针
 // 解析完成后, 我们要手动修改这个参数, 把它设置成解析得到的字符串
@@ -34,8 +50,9 @@ using namespace std;
 
 // lexer 返回的所有 token 种类的声明
 // 注意 IDENT 和 INT_CONST 会返回 token 的值, 分别对应 str_val 和 int_val
-%token SHORT INT RETURN CONST_MODIFIER
-KEY_WORD_IF KEY_WORD_ELSE
+%token SHORT INT CONST_MODIFIER
+KEY_WORD_IF KEY_WORD_ELSE RETURN
+
 
 %token <str_val> IDENT
 %token <int_val> INT_CONST
@@ -50,9 +67,9 @@ BType Decl
 ConstDecl ConstDefList ConstDef ConstInitVal ConstExp
 VarDecl   VarDefList      VarDef   VarInitVal   VarExp
 
-
-
 %type <int_val> Number
+
+
 
 
 %%
@@ -163,7 +180,6 @@ Stmt:
     stmt->exp = unique_ptr<BaseAST>($3);
     $$ = stmt;
   }
-  |
   // expression statement
   | Exp ';' {
     printf("Exp ; => Stmt\n");
@@ -213,6 +229,7 @@ Stmt:
   |
   // return statement
   RETURN Exp ';' {
+    printf("Return statement at Line: %d, Column: %d\n", @1.first_line, @1.first_column);
     printf("return Exp ; => Stmt\n");
     auto stmt = new StmtAST();
     stmt->choice = RETURN_STATEMENT;

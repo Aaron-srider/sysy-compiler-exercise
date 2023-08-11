@@ -1,3 +1,4 @@
+%option yylineno
 %option noyywrap
 %option nounput
 %option noinput
@@ -17,6 +18,7 @@
 
 using namespace std;
 
+int yycolumn = 1;
 %}
 
 /* 空白符和注释 */
@@ -38,7 +40,12 @@ Hexadecimal   0[xX][0-9a-fA-F]+
 
 "short"           { return SHORT; }
 "int"           { return INT; }
-"return"        { return RETURN; }
+"return"        {
+    yylloc.first_line = yylloc.last_line = yylineno;
+    yylloc.first_column = yycolumn;
+    yylloc.last_column = yycolumn + yyleng - 1;
+    return RETURN;
+ }
 
 "const" {return CONST_MODIFIER;}
 
