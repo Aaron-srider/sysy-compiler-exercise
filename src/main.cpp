@@ -17,7 +17,9 @@ extern FILE *yyin;
 
 int yyparse(std::unique_ptr<BaseAST> &ast);
 
+
 #include <filesystem>
+#include "symbol_table.h"
 
 namespace fs = std::filesystem;
 
@@ -70,7 +72,7 @@ int main(int argc, const char *argv[]) {
     // 输出解析得到的 AST
     cout << ast->dump() << endl;
 
-
+    SymbolTableFactory::symbol_table->print();
 
     return 0;
 }

@@ -1,0 +1,1 @@
+add_library(compiler_lib symbol_table.cpp)

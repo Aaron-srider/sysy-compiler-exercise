@@ -43,21 +43,26 @@ if(NOT (L_SOURCES STREQUAL "" AND Y_SOURCES STREQUAL ""))
   add_flex_bison_dependency(Lexer Parser)
 endif()
 
+
 # project link directories
 link_directories(${LIB_DIR})
 
 # project include directories
 include_directories(src)
-include_directories(src/ast)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${INC_DIR})
+
+
+add_subdirectory(src)
+add_subdirectory(test)
+
 
 # all of C/C++ source files
 file(GLOB_RECURSE C_SOURCES "src/*.c")
 file(GLOB_RECURSE CXX_SOURCES "src/*.cpp")
 file(GLOB_RECURSE CC_SOURCES "src/*.cc")
 set(SOURCES ${C_SOURCES} ${CXX_SOURCES} ${CC_SOURCES}
-            ${FLEX_Lexer_OUTPUTS} ${BISON_Parser_OUTPUT_SOURCE})
+            ${FLEX_Lexer_OUTPUTS} ${BISON_Parser_OUTPUT_SOURCE} src/symbol_table.h)
 
 message(STATUS "C/C++ source files:" ${SOURCES})
 
@@ -65,3 +70,7 @@ message(STATUS "C/C++ source files:" ${SOURCES})
 add_executable(compiler ${SOURCES})
 set_target_properties(compiler PROPERTIES C_STANDARD 11 CXX_STANDARD 17)
 target_link_libraries(compiler koopa pthread dl)
+
+
+
+

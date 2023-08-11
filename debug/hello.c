@@ -7,7 +7,7 @@ int main() {
     } else {
         ++a;
     }
-
+    const int name = 1;
     {
         a = 1 + 2;
         int b = 2 + 3;

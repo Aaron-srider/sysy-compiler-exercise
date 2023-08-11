@@ -5,6 +5,8 @@
 #include <memory>
 #include <string>
 #include "Ast.h"
+#include "symbol_table.h"
+
 #define YYERROR_VERBOSE 1
 // 声明 lexer 函数和错误处理函数
 int yylex();
@@ -229,7 +231,6 @@ Stmt:
   |
   // return statement
   RETURN Exp ';' {
-    printf("Return statement at Line: %d, Column: %d\n", @1.first_line, @1.first_column);
     printf("return Exp ; => Stmt\n");
     auto stmt = new StmtAST();
     stmt->choice = RETURN_STATEMENT;
@@ -539,10 +540,6 @@ LOrExp '|''|' LAndExp {
 	$$ = lor_exp;
 }
 
-
-
-
-
 BType:
 INT {
 	printf("INT => BType\n");
@@ -550,7 +547,6 @@ INT {
 	b_type->type = "int";
 	$$ = b_type;
 }
-
 
 Decl:
 ConstDecl {
@@ -603,6 +599,23 @@ ConstDef
 ConstDef:
 IDENT '=' ConstInitVal {
 	printf("IDENT = ConstInitVal => ConstDef\n");
+
+	printf("const variable definition encountered\n");
+
+
+	// first we check if the const has been defined in the previous context
+
+
+	auto var_ident = std::string(*$1);
+	SymbolTableFactory::symbol_table->insert(var_ident, SymbolTableFactory::wrap_symbol_info(
+						   true,
+						   "int",
+						   var_ident,
+						   "",
+						   std::make_shared<LocationImpl>(@1.first_line, @1.first_column, @1.last_line, @1.last_column)
+					   )
+			   );
+
 	auto const_def = new ConstDefinitionAST();
 	const_def->ident = *$1;
 	const_def->const_initialization_expression = unique_ptr<BaseAST>($3);
@@ -632,6 +645,7 @@ Exp {
 
 VarDecl:
 BType VarDefList ';' {
+
 	printf("BType VarDefList ;=> VarDecl\n");
 	auto var_decl = new VarDeclarationAST();
 	var_decl->b_type = unique_ptr<BaseAST>($1);
@@ -642,6 +656,7 @@ BType VarDefList ';' {
 VarDefList:
 VarDef
 {
+
 	printf("VarDef => VarDefList\n");
 	auto var_def_list = new VarDefinitionListAST();
 	var_def_list->choice = VAR_DEFINITION;
@@ -663,7 +678,20 @@ VarDef
 
 VarDef:
 IDENT '=' VarInitVal {
+
 	printf("IDENT = VarInitVal => VarDef\n");
+
+	printf("variable definition encountered\n");
+
+	auto var_ident = std::string(*$1);
+	SymbolTableFactory::symbol_table->insert(var_ident, SymbolTableFactory::wrap_symbol_info(
+						   false,
+						   "int",
+						   var_ident,
+						   "",
+						   std::make_shared<LocationImpl>(@1.first_line, @1.first_column, @1.last_line, @1.last_column)
+					   )
+			   );
 	auto
 	var_def = new VarDefinitionAST();
 	var_def->ident = *$1;
